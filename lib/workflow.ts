@@ -35,7 +35,7 @@ const workflow = new StateGraph(MinutesGraphState)
   .addEdge("revise_minutes", "create_critique")
   .addEdge("output_meeting", END);
 
-export const memory = SqliteSaver.fromConnString(DB_NAME);
+export const memory = SqliteSaver.fromConnString(':memory:');
 
 // Compile the graph
 export const app = workflow.compile({ checkpointer: memory });
