@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface Attendee {
@@ -13,21 +14,20 @@ interface Task {
 }
 
 interface MeetingMinutes {
-
-    title: string;
-    date: string;
-    attendees: Attendee[];
-    summary: string;
-    takeaways: string[];
-    conclusions: string[];
-    next_meeting: string[];
-    tasks: Task[];
-    message_to_critique: string[];
-
+  title: string;
+  date: string;
+  attendees: Attendee[];
+  summary: string;
+  takeaways: string[];
+  conclusions: string[];
+  next_meeting: string[];
+  tasks: Task[];
+  message_to_critique: string;
 }
 
+export function MinutesDisplay({ minutesData }: { minutesData: string }) {
+  const minutes: MeetingMinutes = JSON.parse(minutesData);
 
-export function MinutesDisplay({ minutes }: { minutes: MeetingMinutes }) {
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -35,65 +35,50 @@ export function MinutesDisplay({ minutes }: { minutes: MeetingMinutes }) {
       </CardHeader>
       <CardContent>
         <p><strong>Fecha:</strong> {minutes.date}</p>
+        
         <h3 className="font-semibold mt-2">Asistentes:</h3>
         <ul>
-  {minutes.attendees?.map((attendee, index) => (
-    <li key={index}>
-      {attendee.name !== "Information not provided" ? attendee.name : "N/A"} - 
-      {attendee.position !== "Information not provided" ? attendee.position : "N/A"} 
-      ({attendee.role !== "none" ? attendee.role : "N/A"})
-    </li>
-  ))}
-</ul>
+          {minutes.attendees.map((attendee, index) => (
+            <li key={index}>
+              {attendee.name} {attendee.position !== "none" ? `- ${attendee.position}` : ""} ({attendee.role})
+            </li>
+          ))}
+        </ul>
+
         <h3 className="font-semibold mt-2">Resumen:</h3>
         <p>{minutes.summary}</p>
-        <h3 className="font-semibold mt-2">Puntos clave:</h3>
-        {minutes.takeaways && minutes.takeaways.length > 0 && (
-  <>
-    <ul>
-      {minutes.takeaways.map((takeaway, index) => (
-        <li key={index}>{takeaway}</li>
-      ))}
-    </ul>
-    <h3 className="font-semibold mt-2">Conclusiones:</h3>
-  </>
-)}
 
-{minutes.conclusions && minutes.conclusions.length > 0 ? (
-  <ul>
-    {minutes.conclusions.map((conclusion, index) => (
-      <li key={index}>{conclusion}</li>
-    ))}
-  </ul>
-) : (
-  <p>No hay conclusiones disponibles.</p>
-)}
+        <h3 className="font-semibold mt-2">Puntos clave:</h3>
+        <ul>
+          {minutes.takeaways.map((takeaway, index) => (
+            <li key={index}>{takeaway}</li>
+          ))}
+        </ul>
+
+        <h3 className="font-semibold mt-2">Conclusiones:</h3>
+        <ul>
+          {minutes.conclusions.map((conclusion, index) => (
+            <li key={index}>{conclusion}</li>
+          ))}
+        </ul>
 
         <h3 className="font-semibold mt-2">Próxima reunión:</h3>
-        {minutes.next_meeting && minutes.next_meeting.length > 0 ? (
-  <ul>
-    {minutes.next_meeting.map((item, index) => (
-      <li key={index}>{item}</li>
-    ))}
-  </ul>
-) : (
-  <p>No hay información disponible para la próxima reunión.</p>
-)}
+        <ul>
+          {minutes.next_meeting.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
 
-<h3 className="font-semibold mt-2">Tareas:</h3>
-{minutes.tasks && minutes.tasks.length > 0 ? (
-  <ul>
-    {minutes.tasks.map((task, index) => (
-      <li key={index}>
-        {task.responsible} - {task.description} (Fecha: {task.date})
-      </li>
-    ))}
-  </ul>
-) : (
-  <p>No hay tareas asignadas.</p>
-)}
+        <h3 className="font-semibold mt-2">Tareas:</h3>
+        <ul>
+          {minutes.tasks.map((task, index) => (
+            <li key={index}>
+              {task.responsible} - {task.description} (Fecha: {task.date})
+            </li>
+          ))}
+        </ul>
 
-        <p className="mt-2"><strong>Mensaje adicional:</strong> {minutes.message_to_critique}</p>
+        <p className="mt-2"><strong>Mensaje adicional:</strong> {minutes.message_to_critique !== "Information not provided" ? minutes.message_to_critique : "No hay mensaje adicional."}</p>
       </CardContent>
     </Card>
   );
