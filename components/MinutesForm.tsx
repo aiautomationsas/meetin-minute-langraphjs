@@ -2,37 +2,16 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { ReloadIcon } from "@radix-ui/react-icons"
+import { ReloadIcon, FileTextIcon } from "@radix-ui/react-icons"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 
-interface Attendee {
-  name: string;
-  position: string;
-  role: string;
+interface MinutesFormProps {
+  onMinutesGenerated: (minutes: any, critique: string) => void;
 }
 
-interface Task {
-  responsible: string;
-  date: string;
-  description: string;
-}
-
-interface MeetingMinutes {
-    title: string;
-    date: string;
-    attendees: Attendee[];
-    summary: string;
-    takeaways: string[];
-    conclusions: string[];
-    next_meeting: string[];
-    tasks: Task[];
-    message_to_critique: string[];
-}
-
-
-
-export function MinutesForm() {
+export function MinutesForm({ onMinutesGenerated }: MinutesFormProps) {
   const [transcript, setTranscript] = useState('');
-  const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +34,7 @@ export function MinutesForm() {
       }
 
       const data = await response.json();
-      setMinutes(data.minutes);
+      onMinutesGenerated(JSON.parse(data.minutes), data.critique);
     } catch (err) {
       console.error('Error generating minutes:', err);
       setError('Failed to generate minutes. Please try again.');
@@ -65,31 +44,50 @@ export function MinutesForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Textarea
-        placeholder="Enter meeting transcript here..."
-        value={transcript}
-        onChange={(e) => setTranscript(e.target.value)}
-        className="min-h-[200px]"
-      />
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          'Generate Minutes'
-        )}
-      </Button>
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-   
-    </form>
+    <Card className="w-full max-w-3xl mx-auto shadow-lg">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">Generar Acta de Reunión</CardTitle>
+        <CardDescription>
+          Ingrese la transcripción de su reunión para generar un acta detallada
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="transcript">Transcripción de la Reunión</Label>
+            <Textarea
+              id="transcript"
+              placeholder="Ingrese la transcripción de la reunión aquí..."
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              className="min-h-[200px] w-full resize-none border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            />
+          </div>
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+          >
+            {isLoading ? (
+              <>
+                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                Generando...
+              </>
+            ) : (
+              <>
+                <FileTextIcon className="mr-2 h-5 w-5" />
+                Generar Acta
+              </>
+            )}
+          </Button>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </form>
+      </CardContent>
+    </Card>
   );
 }

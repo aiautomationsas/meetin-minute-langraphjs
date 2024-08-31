@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Attendee {
   name: string;
@@ -25,11 +27,22 @@ interface MeetingMinutes {
   message_to_critique: string;
 }
 
-export function MinutesDisplay({ minutesData }: { minutesData: string }) {
+interface MinutesDisplayProps {
+  minutesData: string;
+  critique: string;
+  onRevise: (updatedCritique: string) => void;
+}
+
+export function MinutesDisplay({ minutesData, critique, onRevise }: MinutesDisplayProps) {
   const minutes: MeetingMinutes = JSON.parse(minutesData);
+  const [editedCritique, setEditedCritique] = useState(critique);
+
+  const handleRevise = () => {
+    onRevise(editedCritique);
+  };
 
   return (
-    <Card className="mt-4">
+<Card className="mt-4">
       <CardHeader>
         <CardTitle>{minutes.title}</CardTitle>
       </CardHeader>
@@ -79,6 +92,16 @@ export function MinutesDisplay({ minutesData }: { minutesData: string }) {
         </ul>
 
         <p className="mt-2"><strong>Mensaje adicional:</strong> {minutes.message_to_critique !== "Information not provided" ? minutes.message_to_critique : "No hay mensaje adicional."}</p>
+        <h3 className="font-semibold mt-4">Crítica:</h3>
+        <Textarea
+          value={editedCritique}
+          onChange={(e) => setEditedCritique(e.target.value)}
+          rows={5}
+          className="mt-2"
+        />
+        <Button onClick={handleRevise} className="mt-2">
+          Revisar Acta
+        </Button>
       </CardContent>
     </Card>
   );
