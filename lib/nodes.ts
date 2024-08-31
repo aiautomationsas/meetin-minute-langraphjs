@@ -47,6 +47,22 @@ export async function createCritique(state: typeof MinutesGraphState.State): Pro
   };
 }
 
+export async function reviseMinutes(state: typeof MinutesGraphState.State): Promise<typeof MinutesGraphState.State> {
+  const writerAgent = new WriterAgent(process.env.FIREWORKS_API_KEY || '');
+  const finalState = await writerAgent.revise({
+    transcript: state.transcript,
+    wordCount: 100,
+    minutes: JSON.parse(state.minutes),
+    critique: state.critique
+  });
+
+  return { 
+    ...state, 
+    minutes: JSON.stringify(finalState.minutes),
+    approved: false // Reset approval status after revision
+  };
+}
+
 export function approveMinutes(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
   return { 
     ...state, 

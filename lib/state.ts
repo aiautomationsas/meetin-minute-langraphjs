@@ -1,3 +1,4 @@
+// state.ts
 import { Annotation } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
 
@@ -8,6 +9,7 @@ export const MinutesGraphState = Annotation.Root({
   critique: Annotation<string>(),
   outputFormatMeeting: Annotation<string>(),
   approved: Annotation<boolean>(),
+  currentNode: Annotation<string>(),
   messages: Annotation<BaseMessage[]>({
     reducer: (currentState, updateValue) => currentState.concat(updateValue),
     default: () => [],

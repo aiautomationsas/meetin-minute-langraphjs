@@ -1,28 +1,30 @@
-// src/app/api/generate-minutes/route.ts
 import { NextResponse } from 'next/server'
 import { app } from '@/lib/workflow'
 
 export async function POST(request: Request) {
   try {
-    const { transcript, critique, minutes } = await request.json()
+    const { transcript } = await request.json()
 
-    let initialState = { 
+    if (!transcript) {
+      return NextResponse.json({ error: 'Transcript is required' }, { status: 400 })
+    }
+
+    const initialState = { 
       audioFile: "",
       transcript,
-      minutes: minutes || "",
-      critique: critique || "",
+      minutes: "",
+      critique: "",
       outputFormatMeeting: "",
       approved: false,
-      messages: [],
-      currentNode: minutes && critique ? "revise_minutes" : "read_transcript"
+      messages: []
     }
 
     const thread = { configurable: { thread_id: '42' } }
 
-    const finalState = await app.invoke(initialState, thread);
+    const finalState = await app.invoke(initialState, thread)
 
     if (!finalState.minutes) {
-      throw new Error('No minutes generated or revised');
+      throw new Error('No minutes generated')
     }
 
     return NextResponse.json({ 
@@ -30,9 +32,9 @@ export async function POST(request: Request) {
       critique: finalState.critique
     })
   } catch (error) {
-    console.error('Error generating or revising minutes:', error)
+    console.error('Error generating minutes:', error)
     return NextResponse.json({ 
-      error: 'Failed to generate or revise minutes. Please try again.',
+      error: 'Failed to generate minutes. Please try again.',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

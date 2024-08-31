@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import { MinutesDisplay } from '@/components/MinutesDisplay'
 
-// Actualizamos la definición de MinutesOutput
 interface MinutesOutput {
-  minutes: string;  // Ahora esperamos que 'minutes' sea una cadena JSON
+  minutes: string;
+  critique: string;
 }
 
 export default function Home() {
   const [transcript, setTranscript] = useState('')
   const [minutesData, setMinutesData] = useState<string | null>(null);
+  const [critique, setCritique] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,15 +28,34 @@ export default function Home() {
       const data: MinutesOutput = await response.json()
       console.log("API Response:", data)
       if (response.ok) {
-        // Asegúrate de que data.minutes es una cadena
-        if (typeof data.minutes === 'string') {
-          setMinutesData(data.minutes);
-        } else {
-          console.error('Unexpected minutes data format:', data.minutes);
-          setMinutesData(JSON.stringify(data.minutes));
-        }
+        setMinutesData(data.minutes);
+        setCritique(data.critique);
       } else {
         console.error('Failed to generate minutes:', data)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRevise = async (updatedCritique: string) => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/revise-minutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transcript, critique: updatedCritique, minutes: minutesData }),
+      })
+      const data: MinutesOutput = await response.json()
+      if (response.ok) {
+        setMinutesData(data.minutes);
+        setCritique(data.critique);
+      } else {
+        console.error('Failed to revise minutes:', data)
       }
     } catch (error) {
       console.error('Error:', error)
@@ -63,7 +83,13 @@ export default function Home() {
           {isLoading ? 'Generating...' : 'Generate Minutes'}
         </button>
       </form>
-      {minutesData && <MinutesDisplay minutesData={minutesData} />}
+      {minutesData && critique && (
+        <MinutesDisplay 
+          minutesData={minutesData} 
+          critique={critique} 
+          onRevise={handleRevise}
+        />
+      )}
     </main>
   )
 }
