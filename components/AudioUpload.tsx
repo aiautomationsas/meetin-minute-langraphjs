@@ -2,18 +2,21 @@ import React, { useState, useRef } from 'react';
 import { upload } from '@vercel/blob/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (url: string) => void }) {
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const inputFileRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsUploading(true);
+    setError(null);
 
-    if (!inputFileRef.current?.files) {
-      console.error("No file selected");
+    if (!inputFileRef.current?.files?.[0]) {
+      setError("No se ha seleccionado ningún archivo");
       setIsUploading(false);
       return;
     }
@@ -26,9 +29,11 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
         handleUploadUrl: '/api/upload',
       });
 
+      console.log('Archivo subido:', newBlob);
       onUploadComplete(newBlob.url);
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('Error al subir el archivo:', error);
+      setError('Error al subir el archivo. Por favor, inténtelo de nuevo.');
     } finally {
       setIsUploading(false);
     }
@@ -62,9 +67,14 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
       {fileName && (
         <p className="text-sm text-gray-500">Archivo seleccionado: {fileName}</p>
       )}
-      <Button type="submit" disabled={isUploading} className="w-full">
+      <Button type="submit" disabled={isUploading || !fileName} className="w-full">
         {isUploading ? 'Subiendo...' : 'Subir Audio'}
       </Button>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </form>
   );
 }
