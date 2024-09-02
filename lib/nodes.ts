@@ -1,6 +1,6 @@
 import { CritiqueAgent } from './CritiqueAgent';
 import { MinutesGraphState } from './state';
-import { WriterAgent } from './WriterAgent'; // Asegúrate de importar la clase desde el archivo correcto
+import { WriterAgent } from './WriterAgent';
 
 export function readTranscript(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
   return { 
@@ -14,15 +14,13 @@ export async function createMinutes(state: typeof MinutesGraphState.State): Prom
   let finalState;
 
   if (state.critique) {
-    // Si hay una crítica, se revisan las actas existentes
     finalState = await writerAgent.revise({
       transcript: state.transcript,
       wordCount: 100,
-      minutes: JSON.parse(state.minutes), // Convert string to MinutesOutput object
+      minutes: JSON.parse(state.minutes),
       critique: state.critique
     });
   } else {
-    // Si no hay crítica, se generan nuevas actas a partir de la transcripción
     finalState = await writerAgent.write({
       transcript: state.transcript,
       wordCount: 100
@@ -31,7 +29,7 @@ export async function createMinutes(state: typeof MinutesGraphState.State): Prom
 
   return { 
     ...state, 
-    minutes: JSON.stringify(finalState.minutes) // Convert MinutesOutput back to string
+    minutes: JSON.stringify(finalState.minutes)
   };
 }
 
@@ -59,7 +57,7 @@ export async function reviseMinutes(state: typeof MinutesGraphState.State): Prom
   return { 
     ...state, 
     minutes: JSON.stringify(finalState.minutes),
-    approved: false // Reset approval status after revision
+    approved: false
   };
 }
 
@@ -71,8 +69,41 @@ export function approveMinutes(state: typeof MinutesGraphState.State): typeof Mi
 }
 
 export function outputMeeting(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
+  const minutes = JSON.parse(state.minutes);
+  const markdown = `
+# ${minutes.title}
+
+**Fecha:** ${minutes.date}
+
+## Asistentes
+| **Nombre** | **Posición** | **Rol** |
+|------------|--------------|---------|
+${minutes.attendees.map((attendee: { name: any; position: any; role: any; }) => `| ${attendee.name} | ${attendee.position} | ${attendee.role} |`).join('\n')}
+
+## Resumen
+${minutes.summary}
+
+## Puntos clave
+${minutes.takeaways.map((takeaway: any) => `- ${takeaway}`).join('\n')}
+
+## Conclusiones
+${minutes.conclusions.map((conclusion: any) => `- ${conclusion}`).join('\n')}
+
+## Próxima reunión
+${Array.isArray(minutes.next_meeting) 
+  ? minutes.next_meeting.map((item: any) => `- ${item}`).join('\n')
+  : typeof minutes.next_meeting === 'string'
+    ? minutes.next_meeting
+    : 'No se ha establecido la próxima reunión'}
+
+## Tareas
+| **Responsable** | **Descripción** | **Fecha** |
+|-----------------|-----------------|-----------|
+${minutes.tasks.map((task: { responsible: any; description: any; date: any; }) => `| ${task.responsible} | ${task.description} | ${task.date} |`).join('\n')}
+  `;
+
   return { 
     ...state, 
-    outputFormatMeeting: "Final Minutes en markdown with minutes and critique" 
+    outputFormatMeeting: markdown 
   };
 }
