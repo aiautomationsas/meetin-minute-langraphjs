@@ -1,11 +1,8 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
-export default async function handler(
-  request: NextApiRequest,
-  response: NextApiResponse
-) {
-  const body = request.body as HandleUploadBody;
+export async function POST(request: NextRequest) {
+  const body = await request.json() as HandleUploadBody;
 
   try {
     const jsonResponse = await handleUpload({
@@ -26,15 +23,11 @@ export default async function handler(
       },
     });
 
-    return response.status(200).json(jsonResponse);
+    return NextResponse.json(jsonResponse);
   } catch (error) {
     console.error('Error handling upload:', error);
-    return response.status(500).json({ error: 'Error handling upload' });
+    return NextResponse.json({ error: 'Error handling upload' }, { status: 500 });
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const dynamic = 'force-dynamic';

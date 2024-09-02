@@ -26,7 +26,7 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
     try {
       const newBlob = await upload(file.name, file, {
         access: 'public',
-        handleUploadUrl: '/api/upload',
+        handleUploadUrl: '/api/upload',  // Asegúrate de que esta ruta sea correcta
       });
 
       console.log('Archivo subido:', newBlob);
