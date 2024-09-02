@@ -76,20 +76,25 @@ export function outputMeeting(state: typeof MinutesGraphState.State): typeof Min
 **Fecha:** ${minutes.date}
 
 ## Asistentes
+
 | **Nombre** | **Posición** | **Rol** |
 |------------|--------------|---------|
 ${minutes.attendees.map((attendee: { name: any; position: any; role: any; }) => `| ${attendee.name} | ${attendee.position} | ${attendee.role} |`).join('\n')}
 
 ## Resumen
+
 ${minutes.summary}
 
 ## Puntos clave
+
 ${minutes.takeaways.map((takeaway: any) => `- ${takeaway}`).join('\n')}
 
 ## Conclusiones
+
 ${minutes.conclusions.map((conclusion: any) => `- ${conclusion}`).join('\n')}
 
 ## Próxima reunión
+
 ${Array.isArray(minutes.next_meeting) 
   ? minutes.next_meeting.map((item: any) => `- ${item}`).join('\n')
   : typeof minutes.next_meeting === 'string'
@@ -97,6 +102,7 @@ ${Array.isArray(minutes.next_meeting)
     : 'No se ha establecido la próxima reunión'}
 
 ## Tareas
+
 | **Responsable** | **Descripción** | **Fecha** |
 |-----------------|-----------------|-----------|
 ${minutes.tasks.map((task: { responsible: any; description: any; date: any; }) => `| ${task.responsible} | ${task.description} | ${task.date} |`).join('\n')}
