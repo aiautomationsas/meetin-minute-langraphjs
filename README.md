@@ -1,36 +1,73 @@
+# Meetin Minute LangraphJS
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+## Project Overview
 
-First, run the development server:
+Meetin Minute LangraphJS is a web application designed to assist in generating meeting minutes efficiently. It utilizes advanced AI capabilities to analyze transcripts and produce structured meeting summaries.
 
-```bash
+## Key Features
+
+- Transcription Analysis: Utilizes natural language processing to extract key points from audio recordings.
+- Structured Output: Generates meeting minutes in a standardized format, including attendees, actions items, and decisions.
+- Revision Workflow: Allows for iterative refinement of meeting minutes through a collaborative process.
+- Integration with Database: Stores meeting data in a SQLite database for easy retrieval and analysis.
+
+## Setup Instructions
+
+1. Clone the repository: git clone https://github.com/yourusername/meetin-minute-langraphjs.git cd meetin-minute-langraphjs
+
+
+2. Install dependencies:
+npm install
+
+
+3. Set up environment variables:
+   Create a `.env.local` file in the root directory and add:
+DB_NAME=/path/to/your/database.sqlite
+
+
+4. Start the development server:
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+5. Access the application at http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Important Notes
 
-## Learn More
+- Database Management: The application uses SQLite for local storage. Ensure proper setup of the database connection string in the `.env.local` file.
+- Mejorar la variable transcript en el componente MinutesProcess.tsx en la función:
+    const handleRevise = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/generate-minutes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transcript: JSON.stringify(minutes?.summary),
+                    critique: critique,
+                    minutes: JSON.stringify(minutes)
+                }),
+- Error Handling: Be aware of potential errors during the generation process, such as "No valid JSON object found in the string". These errors typically occur when there's an issue with the input data or network connectivity.
+  ----
+ POST /api/generate-minutes 200 in 9402ms
+Error in generateMinutes: Error: No valid JSON object found in the string
+    at extractJSON (webpack-internal:///(rsc)/./lib/WriterAgent.ts:17:11)
+    at WriterAgent.generateMinutes (webpack-internal:///(rsc)/./lib/WriterAgent.ts:131:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async RunnableLambda.reviseMinutes [as func] (webpack-internal:///(rsc)/./lib/nodes.ts:55:24)
+    at async eval (webpack-internal:///(rsc)/./node_modules/@langchain/core/dist/runnables/base.js:1554:34)
+Error details: No valid JSON object found in the string
+Error generating or revising minutes: Error: Failed to generate minutes
+    at WriterAgent.generateMinutes (webpack-internal:///(rsc)/./lib/WriterAgent.ts:145:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async RunnableLambda.reviseMinutes [as func] (webpack-internal:///(rsc)/./lib/nodes.ts:55:24)
+    at async eval (webpack-internal:///(rsc)/./node_modules/@langchain/core/dist/runnables/base.js:1554:34)
+- Continuous Improvement: The system is still under development and may encounter bugs or unexpected behavior. Regular updates and improvements are planned to enhance stability and functionality.
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Contributions are welcome! Please feel free to submit pull requests or issues on the GitHub repository.
