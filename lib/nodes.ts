@@ -1,85 +1,66 @@
 import { CritiqueAgent } from './CritiqueAgent';
-import { MinutesGraphState } from './state';
 import { WriterAgent } from './WriterAgent';
+import { MinutesGraphState } from './state';
+import { MeetingMinutes, CritiqueOutput } from '../types/meetingMinutes';
+
+const getApiKey = () => process.env.FIREWORKS_API_KEY || '';
 
 export function readTranscript(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
-  return { 
-    ...state, 
-  };
+  return { ...state };
 }
 
 export async function createMinutes(state: typeof MinutesGraphState.State): Promise<typeof MinutesGraphState.State> {
-  const writerAgent = new WriterAgent(process.env.FIREWORKS_API_KEY || '');
+  const writerAgent = new WriterAgent(getApiKey());
+  const { transcript, critique } = state;
 
-  let finalState;
+  const minutesOutput = await (critique
+    ? writerAgent.revise({ transcript, wordCount: 100, minutes: state.minutes, critique })
+    : writerAgent.write({ transcript, wordCount: 100 }));
 
-  if (state.critique) {
-    finalState = await writerAgent.revise({
-      transcript: state.transcript,
-      wordCount: 100,
-      minutes: JSON.parse(state.minutes),
-      critique: state.critique
-    });
-  } else {
-    finalState = await writerAgent.write({
-      transcript: state.transcript,
-      wordCount: 100
-    });
-  }
-
-  return { 
-    ...state, 
-    minutes: JSON.stringify(finalState.minutes)
-  };
+  return { ...state, minutes: validateMinutes(minutesOutput.minutes) };
 }
 
 export async function createCritique(state: typeof MinutesGraphState.State): Promise<typeof MinutesGraphState.State> {
-  const critiqueAgent = new CritiqueAgent(process.env.FIREWORKS_API_KEY || '');
-  const finalState = await critiqueAgent.createCritique({
-    transcript: state.transcript,
-    minutes: state.minutes,
-  });
-  return { 
-    ...state, 
-    critique: finalState.critique
-  };
+  const critiqueAgent = new CritiqueAgent(getApiKey());
+  const { transcript, minutes } = state;
+  const critique = await critiqueAgent.createCritique({ transcript, minutes });
+  return { ...state, critique };
 }
 
 export async function reviseMinutes(state: typeof MinutesGraphState.State): Promise<typeof MinutesGraphState.State> {
-  const writerAgent = new WriterAgent(process.env.FIREWORKS_API_KEY || '');
-  const finalState = await writerAgent.revise({
-    transcript: state.transcript,
-    wordCount: 100,
-    minutes: JSON.parse(state.minutes),
-    critique: state.critique
-  });
+  const writerAgent = new WriterAgent(getApiKey());
+  const { transcript, minutes, critique } = state;
+  const revisedMinutesOutput = await writerAgent.revise({ transcript, wordCount: 100, minutes, critique });
 
-  return { 
-    ...state, 
-    minutes: JSON.stringify(finalState.minutes),
-    approved: false
-  };
+  return { ...state, minutes: validateMinutes(revisedMinutesOutput.minutes), approved: false };
 }
 
 export function approveMinutes(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
-  return { 
-    ...state, 
-    approved: true
-  };
+  return { ...state, approved: true };
 }
 
 export function outputMeeting(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
-  const minutes = JSON.parse(state.minutes);
-  const markdown = `
+  return { ...state, outputFormatMeeting: generateMarkdown(state.minutes) };
+}
+
+function validateMinutes(minutes: MeetingMinutes): MeetingMinutes {
+  return {
+    ...minutes,
+    message_to_critique: Array.isArray(minutes.message_to_critique)
+      ? minutes.message_to_critique.join(' ')
+      : minutes.message_to_critique
+  };
+}
+
+function generateMarkdown(minutes: MeetingMinutes): string {
+  return `
 # ${minutes.title}
 
 **Fecha:** ${minutes.date}
 
 ## Asistentes
 
-| **Nombre** | **Posición** | **Rol** |
-|------------|--------------|---------|
-${minutes.attendees.map((attendee: { name: any; position: any; role: any; }) => `| ${attendee.name} | ${attendee.position} | ${attendee.role} |`).join('\n')}
+${generateAttendeeTable(minutes.attendees)}
 
 ## Resumen
 
@@ -87,29 +68,38 @@ ${minutes.summary}
 
 ## Puntos clave
 
-${minutes.takeaways.map((takeaway: any) => `- ${takeaway}`).join('\n')}
+${generateBulletList(minutes.takeaways)}
 
 ## Conclusiones
 
-${minutes.conclusions.map((conclusion: any) => `- ${conclusion}`).join('\n')}
+${generateBulletList(minutes.conclusions)}
 
 ## Próxima reunión
 
-${Array.isArray(minutes.next_meeting) 
-  ? minutes.next_meeting.map((item: any) => `- ${item}`).join('\n')
-  : typeof minutes.next_meeting === 'string'
-    ? minutes.next_meeting
-    : 'No se ha establecido la próxima reunión'}
+${generateBulletList(minutes.next_meeting)}
 
 ## Tareas
 
+${generateTaskTable(minutes.tasks)}
+  `;
+}
+
+function generateAttendeeTable(attendees: Array<{ name: string; position: string; role: string }>): string {
+  return `
+| **Nombre** | **Posición** | **Rol** |
+|------------|--------------|---------|
+${attendees.map(attendee => `| ${attendee.name} | ${attendee.position} | ${attendee.role} |`).join('\n')}
+  `;
+}
+
+function generateBulletList(items: string[]): string {
+  return items.map(item => `- ${item}`).join('\n');
+}
+
+function generateTaskTable(tasks: Array<{ responsible: string; description: string; date: string }>): string {
+  return `
 | **Responsable** | **Descripción** | **Fecha** |
 |-----------------|-----------------|-----------|
-${minutes.tasks.map((task: { responsible: any; description: any; date: any; }) => `| ${task.responsible} | ${task.description} | ${task.date} |`).join('\n')}
+${tasks.map(task => `| ${task.responsible} | ${task.description} | ${task.date} |`).join('\n')}
   `;
-
-  return { 
-    ...state, 
-    outputFormatMeeting: markdown 
-  };
 }

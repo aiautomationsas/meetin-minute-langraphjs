@@ -27,9 +27,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       minutes: finalState.minutes,
-      critique: finalState.critique,
-      outputFormatMeeting: finalState.outputFormatMeeting // Ensure this field is returned
+      critique: finalState.critique.critique, // Asegúrate de acceder a la propiedad 'critique'
+      outputFormatMeeting: finalState.outputFormatMeeting
     })
+    
   } catch (error) {
     console.error('Error generating or revising minutes:', error)
     return NextResponse.json({ 

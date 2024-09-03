@@ -34,18 +34,21 @@ export default function MinutesProcess() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setMinutes(JSON.parse(data.minutes));
-      setCritique(data.critique);
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      setMinutes(data.minutes);
+      setCritique(data.critique?.critique || '');
     } catch (err) {
       console.error('Error generating minutes:', err);
-      setError('Failed to generate minutes. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to generate minutes. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRevise = async () => {
-    setIsLoadingRevise(true);
+    setIsLoading(true);
     setError(null);
     try {
       const response = await fetch('/api/generate-minutes', {
@@ -54,22 +57,25 @@ export default function MinutesProcess() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          transcript: JSON.stringify(minutes?.summary),
-          critique: critique,
-          minutes: JSON.stringify(minutes)
+          transcript: minutes?.summary || '',
+          critique: { critique },
+          minutes: minutes
         }),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setMinutes(JSON.parse(data.minutes));
-      setCritique(data.critique);
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      setMinutes(data.minutes);
+      setCritique(data.critique?.critique || '');
     } catch (err) {
       console.error('Error revising minutes:', err);
-      setError('Failed to revise minutes. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to revise minutes. Please try again.');
     } finally {
-      setIsLoadingRevise(false);
+      setIsLoading(false);
     }
   };
 

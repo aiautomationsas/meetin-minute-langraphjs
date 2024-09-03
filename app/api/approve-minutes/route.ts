@@ -28,6 +28,10 @@ export async function POST(request: Request) {
       throw new Error('Minutes approval failed');
     }
 
+    if (!finalState.outputFormatMeeting || typeof finalState.outputFormatMeeting !== 'string') {
+      throw new Error('Invalid output format for meeting minutes');
+    }
+
     return NextResponse.json({ 
       message: 'Minutes approved successfully',
       outputFormatMeeting: finalState.outputFormatMeeting
