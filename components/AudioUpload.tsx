@@ -1,88 +1,51 @@
 import React, { useState, useRef } from 'react';
+import { upload } from '@vercel/blob/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (url: string) => void }) {
+interface AudioUploadProps {
+  onUploadComplete: (url: string) => void;
+}
+
+export default function AudioUpload({ onUploadComplete }: AudioUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
-  const [fileName, setFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputFileRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files?.[0]) return;
+
+    const file = event.target.files[0];
     setIsUploading(true);
     setError(null);
 
-    if (!inputFileRef.current?.files?.[0]) {
-      setError("No se ha seleccionado ningún archivo");
-      setIsUploading(false);
-      return;
-    }
-
-    const file = inputFileRef.current.files[0];
-
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload'
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.json();
-      console.log('Archivo subido exitosamente. URL:', blob.url);
+      console.log('Blob URL generada:', blob.url); // Registramos la URL del blob
       onUploadComplete(blob.url);
-    } catch (error) {
-      console.error('Error detallado al subir el archivo:', error);
-      setError(`Error al subir el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } catch (err) {
+      console.error('Error al subir el archivo:', err);
+      setError('Error al subir el archivo. Por favor, inténtelo de nuevo.');
     } finally {
       setIsUploading(false);
     }
   };
 
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-    }
-  };
-
-  const triggerFileInput = () => {
-    inputFileRef.current?.click();
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <Input
-          type="file"
-          accept="audio/mp3,audio/mp4,audio/ogg,audio/wav,audio/m4a,audio/aac"
-          onChange={handleFileChange}
-          className="hidden"
-          ref={inputFileRef}
-        />
-        <Button type="button" onClick={triggerFileInput} variant="outline" className="w-full">
-          Seleccionar archivo de audio
-        </Button>
-      </div>
-      {fileName && (
-        <p className="text-sm text-gray-500">Archivo seleccionado: {fileName}</p>
-      )}
-      <Button type="submit" disabled={isUploading || !fileName} className="w-full">
-        {isUploading ? 'Subiendo...' : 'Subir Audio'}
-      </Button>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </form>
+    <div>
+      <Input
+        type="file"
+        accept="audio/*"
+        onChange={handleUpload}
+        disabled={isUploading}
+        ref={inputFileRef}
+      />
+      {isUploading && <p>Subiendo archivo...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+    </div>
   );
 }
