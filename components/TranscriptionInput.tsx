@@ -27,30 +27,33 @@ export default function TranscriptionInput({ onTranscriptionComplete }: Transcri
     console.log('URL del blob recibida en TranscriptionInput:', audioUrl);
     setIsTranscribing(true);
     setError(null);
-  
+
     try {
+      const requestBody = { 
+        audio_url: audioUrl,
+        speakers_expected: speakersExpected
+      };
+      console.log('Datos enviados a /api/transcribe:', requestBody);
+
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          audio_url: audioUrl,
-          speakers_expected: speakersExpected
-        }),
+        body: JSON.stringify(requestBody),
       });
-  
-      console.log('Datos enviados a /api/transcribe:', { audio_url: audioUrl, speakers_expected: speakersExpected });
-  
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
       }
-  
+
       const data = await response.json();
       console.log('Respuesta de la transcripción:', data);
       
-      if (data.status === 'completed' && data.text) {
-        onTranscriptionComplete(data.text);
+      if (data.transcript.status === 'completed' && data.utterances) {
+        const fullTranscript = data.utterances.map((u: any) => `${u.speaker}: ${u.text}`).join('\n');
+        onTranscriptionComplete(fullTranscript);
       } else {
         throw new Error('Transcripción incompleta o fallida');
       }
