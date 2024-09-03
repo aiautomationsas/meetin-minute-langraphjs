@@ -1,6 +1,7 @@
 // src/app/api/generate-minutes/route.ts
 import { NextResponse } from 'next/server'
 import { app } from '@/lib/workflow'
+import { MeetingMinutes, CritiqueOutput } from '@/types/meetingMinutes'
 
 export async function POST(request: Request) {
   try {
@@ -25,9 +26,16 @@ export async function POST(request: Request) {
       throw new Error('No minutes generated or revised');
     }
 
+    let critiqueOutput: CritiqueOutput = { critique: '' };
+    if (typeof finalState.critique === 'string') {
+      critiqueOutput.critique = finalState.critique;
+    } else if (finalState.critique && typeof finalState.critique.critique === 'string') {
+      critiqueOutput = finalState.critique as CritiqueOutput;
+    }
+
     return NextResponse.json({ 
-      minutes: finalState.minutes,
-      critique: finalState.critique.critique, // Asegúrate de acceder a la propiedad 'critique'
+      minutes: finalState.minutes as MeetingMinutes,
+      critique: critiqueOutput,
       outputFormatMeeting: finalState.outputFormatMeeting
     })
     

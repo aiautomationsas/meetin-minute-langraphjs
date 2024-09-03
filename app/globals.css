@@ -67,3 +67,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  .print-content {
+    padding: 20mm;
+  }
+  .print-header {
+    position: running(header);
+  }
+  .print-footer {
+    position: running(footer);
+  }
+  @page {
+    @top-center {
+      content: element(header);
+    }
+    @bottom-center {
+      content: element(footer);
+    }
+  }
+}

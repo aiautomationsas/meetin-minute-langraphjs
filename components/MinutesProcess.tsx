@@ -4,20 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TranscriptionInput from './TranscriptionInput';
-import { MeetingMinutes } from '@/types/meetingMinutes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ApprovedMinutes } from './ApprovedMinutes';
+import { MinutesGraphState } from '@/lib/state';
+import { MeetingMinutes, CritiqueOutput } from '@/types/meetingMinutes';
 
 export default function MinutesProcess() {
-  const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
-  const [critique, setCritique] = useState('');
+  const [state, setState] = useState<typeof MinutesGraphState.State>({
+    audioFile: "",
+    transcript: "",
+    minutes: {} as MeetingMinutes,
+    critique: {} as CritiqueOutput,
+    outputFormatMeeting: "",
+    approved: false,
+    currentNode: "",
+    messages: [],
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLoadingRevise, setIsLoadingRevise] = useState(false);
-  const [isLoadingApprove, setIsLoadingApprove] = useState(false);
-  const [approvedMinutes, setApprovedMinutes] = useState<string | null>(null);
 
   const handleTranscriptionComplete = async (transcript: string) => {
     setIsLoading(true);
@@ -25,20 +30,17 @@ export default function MinutesProcess() {
     try {
       const response = await fetch('/api/generate-minutes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transcript }),
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setMinutes(data.minutes);
-      setCritique(data.critique?.critique || '');
+      setState(prevState => ({
+        ...prevState,
+        transcript,
+        minutes: data.minutes,
+        critique: data.critique,
+      }));
     } catch (err) {
       console.error('Error generating minutes:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate minutes. Please try again.');
@@ -53,24 +55,20 @@ export default function MinutesProcess() {
     try {
       const response = await fetch('/api/generate-minutes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transcript: minutes?.summary || '',
-          critique: { critique },
-          minutes: minutes
+          transcript: state.minutes?.summary || '',
+          critique: state.critique,
+          minutes: state.minutes
         }),
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setMinutes(data.minutes);
-      setCritique(data.critique?.critique || '');
+      setState(prevState => ({
+        ...prevState,
+        minutes: data.minutes,
+        critique: data.critique,
+      }));
     } catch (err) {
       console.error('Error revising minutes:', err);
       setError(err instanceof Error ? err.message : 'Failed to revise minutes. Please try again.');
@@ -80,79 +78,53 @@ export default function MinutesProcess() {
   };
 
   const handleApprove = async () => {
-    setIsLoadingApprove(true);
+    setIsLoading(true);
     setError(null);
-    setSuccessMessage(null);
     try {
       const response = await fetch('/api/approve-minutes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ minutes: JSON.stringify(minutes) }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes: state.minutes }),
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
       const data = await response.json();
-      console.log('Minutes approved:', data);
-      // Generar el Markdown aprobado
-      const approvedMarkdown = generateMarkdown(minutes!);
-      setApprovedMinutes(approvedMarkdown);
-      setSuccessMessage('Acta aprobada con éxito');
+      if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      setState(prevState => ({
+        ...prevState,
+        approved: true,
+        outputFormatMeeting: data.outputFormatMeeting,
+      }));
     } catch (err) {
       console.error('Error approving minutes:', err);
-      setError('Failed to approve minutes. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to approve minutes. Please try again.');
     } finally {
-      setIsLoadingApprove(false);
+      setIsLoading(false);
     }
   };
 
   const generateMarkdown = (minutes: MeetingMinutes) => `
-# ${minutes.title}
-
-**Fecha:** ${minutes.date}
-
-## Asistentes
-
-| Nombre | Posición | Rol |
-|--------|----------|-----|
-${minutes.attendees.map(attendee => `| ${attendee.name} | ${attendee.position} | ${attendee.role} |`).join('\n')}
-
-## Resumen
-
-${minutes.summary}
-
-## Puntos clave
-
-${minutes.takeaways.map(takeaway => `- ${takeaway}`).join('\n')}
-
-## Conclusiones
-
-${minutes.conclusions.map(conclusion => `- ${conclusion}`).join('\n')}
-
-## Próxima reunión
-
-${Array.isArray(minutes.next_meeting) 
-  ? minutes.next_meeting.map(item => `- ${item}`).join('\n')
-  : minutes.next_meeting}
-
-## Tareas
-
-| Responsable | Descripción | Fecha |
-|-------------|-------------|-------|
-${minutes.tasks.map(task => `| ${task.responsible} | ${task.description} | ${task.date} |`).join('\n')}
-  `;
+  # ${minutes.title || 'Sin título'}
+  **Fecha:** ${minutes.date || 'Fecha no especificada'}
+  ## Asistentes
+  ${minutes.attendees?.map(a => `- ${a.name || 'Sin nombre'} (${a.position || 'Sin posición'}, ${a.role || 'Sin rol'})`).join('\n') || 'No hay asistentes registrados'}
+  ## Resumen
+  ${minutes.summary || 'No hay resumen disponible'}
+  ## Puntos clave
+  ${minutes.takeaways?.map(t => `- ${t}`).join('\n') || 'No hay puntos clave registrados'}
+  ## Conclusiones
+  ${minutes.conclusions?.map(c => `- ${c}`).join('\n') || 'No hay conclusiones registradas'}
+  ## Próxima reunión
+  ${Array.isArray(minutes.next_meeting) ? minutes.next_meeting.map(m => `- ${m}`).join('\n') : minutes.next_meeting || 'No hay información sobre la próxima reunión'}
+  ## Tareas
+  ${minutes.tasks?.map(t => `- ${t.responsible || 'Sin responsable'}: ${t.description || 'Sin descripción'} (${t.date || 'Sin fecha'})`).join('\n') || 'No hay tareas registradas'}
+`;
 
   return (
     <div className="w-full max-w-3xl mx-auto mt-8 space-y-8">
-      {!approvedMinutes && (
-        <TranscriptionInput onTranscriptionComplete={handleTranscriptionComplete} />
-      )}
+      {!state.approved && <TranscriptionInput onTranscriptionComplete={handleTranscriptionComplete} />}
 
-      {isLoading && <p>Generando actas...</p>}
+      {isLoading && <p>Procesando...</p>}
 
-      {minutes && !approvedMinutes && (
+      {state.minutes && !state.approved && (
         <Card>
           <CardHeader>
             <CardTitle>Acta Generada</CardTitle>
@@ -160,47 +132,39 @@ ${minutes.tasks.map(task => `| ${task.responsible} | ${task.description} | ${tas
           <CardContent>
             <div className="markdown-content">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {generateMarkdown(minutes)}
+                {generateMarkdown(state.minutes)}
               </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {minutes && !approvedMinutes && (
+      {state.minutes && !state.approved && (
         <Card>
           <CardHeader>
             <CardTitle>Crítica</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
-              value={critique}
-              onChange={(e) => setCritique(e.target.value)}
+              value={state.critique?.critique || ''}
+              onChange={(e) => setState(prevState => ({
+                ...prevState,
+                critique: { critique: e.target.value }
+              }))}
               rows={5}
               placeholder="Ingrese su crítica aquí..."
               className="w-full mb-4"
             />
             <div className="flex justify-end space-x-4">
-              <Button onClick={handleRevise} disabled={isLoadingRevise}>
-                {isLoadingRevise ? 'Revisando...' : 'Revisar Acta'}
+              <Button onClick={handleRevise} disabled={isLoading}>
+                {isLoading ? 'Revisando...' : 'Revisar Acta'}
               </Button>
-              <Button onClick={handleApprove} variant="outline" disabled={isLoadingApprove}>
-                {isLoadingApprove ? 'Aprobando...' : 'Aprobar Acta'}
+              <Button onClick={handleApprove} variant="outline" disabled={isLoading}>
+                {isLoading ? 'Aprobando...' : 'Aprobar Acta'}
               </Button>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {successMessage && (
-        <Alert variant="default">
-          <AlertTitle>Éxito</AlertTitle>
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {approvedMinutes && (
-        <ApprovedMinutes markdown={approvedMinutes} />
       )}
 
       {error && (
@@ -208,6 +172,10 @@ ${minutes.tasks.map(task => `| ${task.responsible} | ${task.description} | ${tas
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {state.approved && state.outputFormatMeeting && (
+        <ApprovedMinutes markdown={state.outputFormatMeeting} />
       )}
     </div>
   );
