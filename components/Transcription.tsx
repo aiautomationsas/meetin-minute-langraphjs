@@ -28,26 +28,33 @@ export default function Transcription({ audioUrl, onTranscriptionComplete }: Tra
     setIsTranscribing(true);
     setProgress(0);
     setUtterances([]);
-
+  
     try {
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audioUrl, speakersExpected }),
       });
-
-      if (!response.ok) throw new Error('Transcription failed');
-
+  
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
+  
+      if (!response.ok) {
+        throw new Error(data.error || 'Transcription failed');
+      }
+  
+      if (data.error) {
+        throw new Error(data.error);
+      }
+  
       setUtterances(data.utterances);
-
+  
       // Combine all utterances into a single string and pass it to the parent component
       const fullTranscript = data.utterances.map((u: { speaker: any; text: any; }) => `${u.speaker}: ${u.text}`).join('\n');
       onTranscriptionComplete(fullTranscript);
     } catch (error) {
       console.error('Transcription error:', error);
+      // Display error to the user
+      setUtterances([{ speaker: 'Error', text: error instanceof Error ? error.message : 'An unknown error occurred' }]);
     } finally {
       setIsTranscribing(false);
       setProgress(100);

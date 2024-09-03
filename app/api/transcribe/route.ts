@@ -32,12 +32,12 @@ export async function POST(request: Request) {
 
     if (transcript.status === 'error') {
       console.error('Error en la transcripción:', transcript.error);
-      throw new Error(transcript.error);
+      return NextResponse.json({ error: `Error en la transcripción: ${transcript.error}` }, { status: 500 });
     }
 
     if (!transcript.utterances || transcript.utterances.length === 0) {
       console.error('No se generaron utterances');
-      throw new Error('No se generaron utterances');
+      return NextResponse.json({ error: 'No se generaron utterances' }, { status: 500 });
     }
 
     const utterances = transcript.utterances.map(utterance => ({
@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ utterances });
   } catch (error) {
     console.error('Error detallado en la transcripción:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Transcription failed' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Transcription failed',
+      details: error instanceof Error ? error.stack : 'No stack trace available'
+    }, { status: 500 });
   }
 }
