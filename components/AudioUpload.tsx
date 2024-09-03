@@ -24,16 +24,17 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
     const file = inputFileRef.current.files[0];
 
     try {
+      console.log('Iniciando subida del archivo:', file.name);
       const newBlob = await upload(file.name, file, {
         access: 'public',
-        handleUploadUrl: '/api/upload',  // Asegúrate de que esta ruta sea correcta
+        handleUploadUrl: '/api/upload',
       });
 
-      console.log('Archivo subido:', newBlob);
+      console.log('Archivo subido exitosamente:', newBlob);
       onUploadComplete(newBlob.url);
     } catch (error) {
-      console.error('Error al subir el archivo:', error);
-      setError('Error al subir el archivo. Por favor, inténtelo de nuevo.');
+      console.error('Error detallado al subir el archivo:', error);
+      setError(`Error al subir el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsUploading(false);
     }
