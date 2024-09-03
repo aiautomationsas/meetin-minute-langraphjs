@@ -10,9 +10,14 @@ const client = new AssemblyAI({
   apiKey: API_KEY,
 })
 
-
 export async function POST(request: Request) {
   const { audioUrl, speakersExpected } = await request.json();
+
+  if (!audioUrl) {
+    return NextResponse.json({ error: 'Audio URL is required' }, { status: 400 });
+  }
+
+  console.log('Iniciando transcripción para:', audioUrl);
 
   const params = {
     audio: audioUrl,
@@ -33,6 +38,8 @@ export async function POST(request: Request) {
       speaker: utterance.speaker,
       text: utterance.text,
     })) || [];
+
+    console.log('Transcripción completada:', utterances);
 
     return NextResponse.json({ utterances });
   } catch (error) {

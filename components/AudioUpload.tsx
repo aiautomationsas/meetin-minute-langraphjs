@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { upload } from '@vercel/blob/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,14 +23,21 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
     const file = inputFileRef.current.files[0];
 
     try {
-      console.log('Iniciando subida del archivo:', file.name);
-      const newBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-      console.log('Archivo subido exitosamente:', newBlob);
-      onUploadComplete(newBlob.url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.json();
+      console.log('Archivo subido exitosamente. URL:', blob.url);
+      onUploadComplete(blob.url);
     } catch (error) {
       console.error('Error detallado al subir el archivo:', error);
       setError(`Error al subir el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -39,6 +45,7 @@ export default function AudioUpload({ onUploadComplete }: { onUploadComplete: (u
       setIsUploading(false);
     }
   };
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
