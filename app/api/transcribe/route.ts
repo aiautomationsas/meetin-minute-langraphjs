@@ -12,7 +12,6 @@ const client = new AssemblyAI({
 
 export async function POST(request: Request) {
   const { audioUrl, speakersExpected } = await request.json();
-
   const params = {
     audio: audioUrl,
     speech_model: "best" as any,
@@ -33,20 +32,24 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
-
   if (!id) {
     return NextResponse.json({ error: 'ID de transcripción no proporcionado' }, { status: 400 });
   }
 
   try {
-    const transcript = await client.transcripts.get(id);
+    let transcript = await client.transcripts.get(id);
+    let pollingInterval = 5000; // 5 segundos
+
+    while (transcript.status !== 'completed' && transcript.status !== 'error') {
+      await new Promise(resolve => setTimeout(resolve, pollingInterval));
+      transcript = await client.transcripts.get(id);
+    }
 
     if (transcript.status === 'completed') {
       const utterances = transcript.utterances?.map(utterance => ({
         speaker: utterance.speaker,
         text: utterance.text,
       })) || [];
-
       return NextResponse.json({ status: 'completed', utterances });
     } else if (transcript.status === 'error') {
       return NextResponse.json({ status: 'error', error: transcript.error });
