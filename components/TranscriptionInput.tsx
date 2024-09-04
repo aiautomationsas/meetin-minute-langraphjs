@@ -27,7 +27,7 @@ export default function TranscriptionInput({ onTranscriptionComplete }: Transcri
     console.log('URL del blob recibida en TranscriptionInput:', audioUrl);
     setIsTranscribing(true);
     setError(null);
-  
+
     try {
       const response = await fetch('/api/transcribe', {
         method: 'POST',
@@ -39,12 +39,12 @@ export default function TranscriptionInput({ onTranscriptionComplete }: Transcri
           speakersExpected: speakersExpected
         }),
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
       }
-  
+
       const data = await response.json();
       console.log('Respuesta de la transcripción:', data);
       
