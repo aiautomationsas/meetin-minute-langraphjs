@@ -17,7 +17,7 @@ export async function createMinutes(state: typeof MinutesGraphState.State): Prom
     ? writerAgent.revise({ transcript, wordCount: 100, minutes: state.minutes, critique })
     : writerAgent.write({ transcript, wordCount: 100 }));
 
-  return { ...state, minutes: validateMinutes(minutesOutput.minutes) };
+  return { ...state, minutes: validateMinutes(minutesOutput.minutes ?? state.minutes) };
 }
 
 export async function createCritique(state: typeof MinutesGraphState.State): Promise<typeof MinutesGraphState.State> {
@@ -32,7 +32,7 @@ export async function reviseMinutes(state: typeof MinutesGraphState.State): Prom
   const { transcript, minutes, critique } = state;
   const revisedMinutesOutput = await writerAgent.revise({ transcript, wordCount: 100, minutes, critique });
 
-  return { ...state, minutes: validateMinutes(revisedMinutesOutput.minutes), approved: false };
+  return { ...state, minutes: validateMinutes(revisedMinutesOutput.minutes ?? minutes), approved: false };
 }
 
 export function approveMinutes(state: typeof MinutesGraphState.State): typeof MinutesGraphState.State {
