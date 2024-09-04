@@ -76,14 +76,27 @@ export class WriterAgent {
 
     try {
       const result = await chain_writer.invoke({ messages: [request_message] });
-      const jsonStr = this.extractJSON(result.content as string);
-      const parsedResult: MinutesOutput = JSON.parse(jsonStr);
-      
-      if (!parsedResult.minutes) {
-        throw new Error("Invalid minutes structure in response");
+      console.log("Raw response from model:", result);
+
+      let parsedResult: MinutesOutput;
+
+      if (typeof result.content === 'string') {
+        // Intenta parsear como JSON primero
+        try {
+          const jsonStr = this.extractJSON(result.content);
+          parsedResult = JSON.parse(jsonStr);
+        } catch (jsonError) {
+          // Si no es JSON, asume que es una crítica simple
+          parsedResult = { critique: result.content.trim() };
+        }
+      } else {
+        throw new Error("Unexpected response format from model");
       }
 
-      this.ensureMessageToCritiqueIsString(parsedResult.minutes);
+      if (parsedResult.minutes) {
+        this.ensureMessageToCritiqueIsString(parsedResult.minutes);
+      }
+
       return parsedResult;
     } catch (error) {
       console.error('Error in generateMinutes:', error);
@@ -132,7 +145,8 @@ export class WriterAgent {
     if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
       return str.slice(jsonStart, jsonEnd + 1);
     }
-    throw new Error("No valid JSON object found in the string");
+    // Si no se encuentra un JSON válido, devuelve el string original
+    return str;
   }
 
   private ensureMessageToCritiqueIsString(minutes: MeetingMinutes): void {

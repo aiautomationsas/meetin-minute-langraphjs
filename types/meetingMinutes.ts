@@ -32,7 +32,8 @@ export interface MinutesInput {
 }
 
 export interface MinutesOutput {
-  minutes: MeetingMinutes;
+  minutes?: MeetingMinutes;
+  critique?: string;
 }
 
 // Tipos para la crítica
