@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEventHandler, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -25,8 +25,9 @@ export default function Transcription({ audioUrl, onTranscriptionComplete }: Tra
   const [progress, setProgress] = useState(0);
   const [speakersExpected, setSpeakersExpected] = useState(2);
   const [error, setError] = useState<string | null>(null);
+  const [transcriptionId, setTranscriptionId] = useState<string | null>(null);
 
-  const handleTranscribe = async () => {
+  const startTranscription = async () => {
     setIsTranscribing(true);
     setProgress(0);
     setUtterances([]);
@@ -40,27 +41,54 @@ export default function Transcription({ audioUrl, onTranscriptionComplete }: Tra
       });
 
       if (!response.ok) {
-        if (response.status === 504) {
-          throw new Error('La solicitud ha excedido el tiempo de espera. Por favor, inténtelo de nuevo.');
-        }
-        throw new Error('Error en la transcripción');
+        throw new Error(`Error al iniciar la transcripción: ${response.statusText}`);
       }
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
-      setUtterances(data.utterances);
-
-      const fullTranscript = data.utterances.map((u: { speaker: any; text: any; }) => `${u.speaker}: ${u.text}`).join('\n');
-      onTranscriptionComplete(fullTranscript);
+      setTranscriptionId(data.transcriptionId);
     } catch (error) {
-      console.error('Error de transcripción:', error);
-      setError(error instanceof Error ? error.message : 'Error desconocido en la transcripción');
-    } finally {
+      console.error('Error al iniciar la transcripción:', error);
+      setError(error instanceof Error ? error.message : 'Error desconocido al iniciar la transcripción');
       setIsTranscribing(false);
-      setProgress(100);
     }
   };
+
+  const checkTranscriptionStatus = async () => {
+    if (!transcriptionId) return;
+
+    try {
+      const response = await fetch(`/api/transcribe-status?id=${transcriptionId}`);
+      if (!response.ok) {
+        throw new Error(`Error al verificar el estado de la transcripción: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        setUtterances(data.utterances);
+        setIsTranscribing(false);
+        setProgress(100);
+        const fullTranscript = data.utterances.map((u: Utterance) => `${u.speaker}: ${u.text}`).join('\n');
+        onTranscriptionComplete(fullTranscript);
+      } else if (data.status === 'in_progress') {
+        setProgress(data.progress || progress);
+      } else if (data.status === 'error') {
+        throw new Error(data.error || 'Error desconocido en la transcripción');
+      }
+    } catch (error) {
+      console.error('Error al verificar el estado de la transcripción:', error);
+      setError(error instanceof Error ? error.message : 'Error desconocido al verificar el estado de la transcripción');
+      setIsTranscribing(false);
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTranscribing && transcriptionId) {
+      interval = setInterval(checkTranscriptionStatus, 5000); // Verifica cada 5 segundos
+    }
+    return () => clearInterval(interval);
+  }, [isTranscribing, transcriptionId]);
 
   return (
     <Card>
@@ -80,7 +108,7 @@ export default function Transcription({ audioUrl, onTranscriptionComplete }: Tra
             className="mt-1"
           />
         </div>
-        <Button onClick={handleTranscribe} disabled={isTranscribing}>
+        <Button onClick={startTranscription} disabled={isTranscribing}>
           {isTranscribing ? 'Transcribiendo...' : 'Iniciar Transcripción'}
         </Button>
         {isTranscribing && (
